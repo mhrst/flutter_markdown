@@ -78,6 +78,10 @@ abstract class MarkdownBuilderDelegate {
   /// text, `href` attribute, and title.
   GestureRecognizer createLink(String text, String? href, String title);
 
+  /// Returns a gesture recognizer to use for any other element with given
+  /// plain-text position of `start`
+  GestureRecognizer createTap(String text, int start);
+
   /// Returns formatted text to use to display the given contents of a `pre`
   /// element.
   ///
@@ -143,7 +147,7 @@ class MarkdownBuilder implements md.NodeVisitor {
   final MarkdownListItemCrossAxisAlignment listItemCrossAxisAlignment;
 
   /// Default tap handler used when [selectable] is set to true
-  final VoidCallback? onTapText;
+  final void Function(String, int)? onTapText;
 
   final List<String> _listIndents = <String>[];
   final List<_BlockElement> _blocks = <_BlockElement>[];
@@ -153,6 +157,7 @@ class MarkdownBuilder implements md.NodeVisitor {
   String? _currentBlockTag;
   String? _lastTag;
   bool _isInBlockquote = false;
+  int _lastLength = 0;
 
   /// Returns widgets that display the given Markdown nodes.
   ///
@@ -164,6 +169,7 @@ class MarkdownBuilder implements md.NodeVisitor {
     _inlines.clear();
     _linkHandlers.clear();
     _isInBlockquote = false;
+    _lastLength = 0;
 
     _blocks.add(_BlockElement(null));
 
@@ -301,16 +307,20 @@ class MarkdownBuilder implements md.NodeVisitor {
         ),
       );
     } else {
+      final textContent = _isInBlockquote ? text.text : trimText(text.text);
       child = _buildRichText(
         TextSpan(
           style: _isInBlockquote
               ? styleSheet.blockquote!.merge(_inlines.last.style)
               : _inlines.last.style,
-          text: _isInBlockquote ? text.text : trimText(text.text),
-          recognizer: _linkHandlers.isNotEmpty ? _linkHandlers.last : null,
+          text: textContent,
+          recognizer: _linkHandlers.isNotEmpty
+              ? _linkHandlers.last
+              : delegate.createTap(textContent, _lastLength),
         ),
         textAlign: _textAlignForBlockTag(_currentBlockTag),
       );
+      _lastLength = _lastLength + textContent.length;
     }
     if (child != null) {
       _inlines.last.children.add(child);
@@ -710,7 +720,6 @@ class MarkdownBuilder implements md.NodeVisitor {
         text!,
         textScaleFactor: styleSheet.textScaleFactor,
         textAlign: textAlign ?? TextAlign.start,
-        onTap: onTapText,
       );
     } else {
       return RichText(

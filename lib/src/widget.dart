@@ -183,7 +183,7 @@ abstract class MarkdownWidget extends StatefulWidget {
   final MarkdownTapLinkCallback? onTapLink;
 
   /// Default tap handler used when [selectable] is set to true
-  final VoidCallback? onTapText;
+  final void Function(String, int)? onTapText;
 
   /// The base directory holding images referenced by Img tags with local or network file paths.
   final String? imageDirectory;
@@ -335,6 +335,18 @@ class _MarkdownWidgetState extends State<MarkdownWidget>
 
   @override
   Widget build(BuildContext context) => widget.build(context, _children);
+
+  @override
+  GestureRecognizer createTap(String text, int start) {
+    final TapGestureRecognizer recognizer = TapGestureRecognizer()
+      ..onTap = () {
+        if (widget.onTapText != null) {
+          widget.onTapText!(text, start);
+        }
+      };
+    _recognizers.add(recognizer);
+    return recognizer;
+  }
 }
 
 /// A non-scrolling widget that parses and displays Markdown.
@@ -356,7 +368,7 @@ class MarkdownBody extends MarkdownWidget {
     MarkdownStyleSheetBaseTheme? styleSheetTheme,
     SyntaxHighlighter? syntaxHighlighter,
     MarkdownTapLinkCallback? onTapLink,
-    VoidCallback? onTapText,
+    void Function(String, int)? onTapText,
     String? imageDirectory,
     List<md.BlockSyntax>? blockSyntaxes,
     List<md.InlineSyntax>? inlineSyntaxes,
@@ -426,7 +438,7 @@ class Markdown extends MarkdownWidget {
     MarkdownStyleSheetBaseTheme? styleSheetTheme,
     SyntaxHighlighter? syntaxHighlighter,
     MarkdownTapLinkCallback? onTapLink,
-    VoidCallback? onTapText,
+    void Function(String, int)? onTapText,
     String? imageDirectory,
     List<md.BlockSyntax>? blockSyntaxes,
     List<md.InlineSyntax>? inlineSyntaxes,
